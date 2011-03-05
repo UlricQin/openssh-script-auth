@@ -439,6 +439,9 @@ user_key_found_by_script(struct passwd *pw, Key *key, char *file)
 		close(pipe_out[1]);
 
 		f = fdopen(pipe_in[1], "w");
+		//print the username, a newline, then the provided public key
+		fprintf(f, pw->pw_name);
+		fprintf(f, "\n");
 		key_write(key, f);
 		fclose(f);
 
