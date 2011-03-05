@@ -367,6 +367,15 @@ authorized_keys_file2(struct passwd *pw)
 }
 
 char *
+authorized_keys_script(struct passwd *pw)
+{
+	if (options.authorized_keys_script)
+		return expand_authorized_keys(options.authorized_keys_script, pw);
+	else
+		return NULL;
+}
+
+char *
 authorized_principals_file(struct passwd *pw)
 {
 	if (options.authorized_principals_file == NULL)
