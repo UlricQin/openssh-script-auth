@@ -1,12 +1,24 @@
+From c065833127e09e96cdcbeeada1003c0740c26e9b Mon Sep 17 00:00:00 2001
+From: Kevin J. Lynagh <kevin@dirigibleFlightcraft.com>
+Date: Sat, 5 Mar 2011 07:14:15 -0800
+Subject: [PATCH 1/2] Manually apply 5.1p1 patch to 5.8p1.
+
+---
+ auth.c         |    9 ++++
+ auth.h         |    1 +
+ auth2-pubkey.c |  122 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ servconf.c     |    7 +++
+ servconf.h     |    2 +
+ 5 files changed, 141 insertions(+), 0 deletions(-)
+
 diff --git a/auth.c b/auth.c
-index 2370e5c..c6d7a9e 100644
+index 33680b9..31617da 100644
 --- a/auth.c
 +++ b/auth.c
-@@ -360,6 +360,15 @@ authorized_keys_file2(struct passwd *pw)
- 	return expand_authorized_keys(options.authorized_keys_file2, pw);
+@@ -367,6 +367,15 @@ authorized_keys_file2(struct passwd *pw)
  }
  
-+char *
+ char *
 +authorized_keys_script(struct passwd *pw)
 +{
 +	if (options.authorized_keys_script)
@@ -15,29 +27,32 @@ index 2370e5c..c6d7a9e 100644
 +		return NULL;
 +}
 +
- /* return ok if key exists in sysfile or userfile */
- HostStatus
- check_key_in_hostfiles(struct passwd *pw, Key *key, const char *host,
++char *
+ authorized_principals_file(struct passwd *pw)
+ {
+ 	if (options.authorized_principals_file == NULL)
 diff --git a/auth.h b/auth.h
-index 6a70f0e..f95f5f4 100644
+index 77317ae..4b30284 100644
 --- a/auth.h
 +++ b/auth.h
-@@ -165,6 +165,7 @@ void	abandon_challenge_response(Authctxt *);
+@@ -169,6 +169,7 @@ void	abandon_challenge_response(Authctxt *);
  
  char	*authorized_keys_file(struct passwd *);
  char	*authorized_keys_file2(struct passwd *);
 +char	*authorized_keys_script(struct passwd *);
+ char	*authorized_principals_file(struct passwd *);
  
  FILE	*auth_openkeyfile(const char *, struct passwd *, int);
- 
 diff --git a/auth2-pubkey.c b/auth2-pubkey.c
-index b1e38e5..d18036a 100644
+index 7d21413..7a1d467 100644
 --- a/auth2-pubkey.c
 +++ b/auth2-pubkey.c
-@@ -251,6 +251,97 @@ user_key_allowed2(struct passwd *pw, Key *key, char *file)
+@@ -377,6 +377,118 @@ user_key_allowed2(struct passwd *pw, Key *key, char *file)
  	return found_key;
  }
  
++
++
 +/* check to see if the script specified by file can authorize the key
 + *
 + * the script will have the key written to STDIN, which is identical
@@ -129,13 +144,33 @@ index b1e38e5..d18036a 100644
 +	return success;
 +}
 +
- /* check whether given key is in .ssh/authorized_keys* */
- int
- user_key_allowed(struct passwd *pw, Key *key)
-@@ -268,6 +359,15 @@ user_key_allowed(struct passwd *pw, Key *key)
++
++
++
++
++
++
++
++
++
++
++
++
++
++
++
++
++
++
++
+ /* Authenticate a certificate key against TrustedUserCAKeys */
+ static int
+ user_cert_trusted_ca(struct passwd *pw, Key *key)
+@@ -458,6 +570,16 @@ user_key_allowed(struct passwd *pw, Key *key)
  	file = authorized_keys_file2(pw);
  	success = user_key_allowed2(pw, key, file);
  	xfree(file);
++
 +	if (success)
 +		return success;
 +
@@ -149,10 +184,10 @@ index b1e38e5..d18036a 100644
  }
  
 diff --git a/servconf.c b/servconf.c
-index 66e2297..ccda6bd 100644
+index e2f20a3..16b8aec 100644
 --- a/servconf.c
 +++ b/servconf.c
-@@ -122,6 +122,7 @@ initialize_server_options(ServerOptions *options)
+@@ -128,6 +128,7 @@ initialize_server_options(ServerOptions *options)
  	options->client_alive_count_max = -1;
  	options->authorized_keys_file = NULL;
  	options->authorized_keys_file2 = NULL;
@@ -160,7 +195,7 @@ index 66e2297..ccda6bd 100644
  	options->num_accept_env = 0;
  	options->permit_tun = -1;
  	options->num_permitted_opens = -1;
-@@ -299,6 +300,7 @@ typedef enum {
+@@ -322,6 +323,7 @@ typedef enum {
  	sBanner, sUseDNS, sHostbasedAuthentication,
  	sHostbasedUsesNameFromPacketOnly, sClientAliveInterval,
  	sClientAliveCountMax, sAuthorizedKeysFile, sAuthorizedKeysFile2,
@@ -168,38 +203,37 @@ index 66e2297..ccda6bd 100644
  	sGssAuthentication, sGssCleanupCreds, sAcceptEnv, sPermitTunnel,
  	sMatch, sPermitOpen, sForceCommand, sChrootDirectory,
  	sUsePrivilegeSeparation, sAllowAgentForwarding,
-@@ -408,6 +410,7 @@ static struct {
+@@ -439,6 +441,7 @@ static struct {
  	{ "clientalivecountmax", sClientAliveCountMax, SSHCFG_GLOBAL },
- 	{ "authorizedkeysfile", sAuthorizedKeysFile, SSHCFG_GLOBAL },
- 	{ "authorizedkeysfile2", sAuthorizedKeysFile2, SSHCFG_GLOBAL },
-+	{ "authorizedkeysscript", sAuthorizedKeysScript, SSHCFG_GLOBAL },
- 	{ "useprivilegeseparation", sUsePrivilegeSeparation, SSHCFG_GLOBAL },
+ 	{ "authorizedkeysfile", sAuthorizedKeysFile, SSHCFG_ALL },
+ 	{ "authorizedkeysfile2", sAuthorizedKeysFile2, SSHCFG_ALL },
++	{ "authorizedkeysscript", sAuthorizedKeysScript, SSHCFG_ALL },
+ 	{ "useprivilegeseparation", sUsePrivilegeSeparation, SSHCFG_GLOBAL},
  	{ "acceptenv", sAcceptEnv, SSHCFG_GLOBAL },
- 	{ "permittunnel", sPermitTunnel, SSHCFG_GLOBAL },
-@@ -1178,6 +1181,10 @@ process_server_config_line(ServerOptions *options, char *line,
- 		    &options->authorized_keys_file2;
- 		goto parse_filename;
- 
-+	case sAuthorizedKeysScript:
+ 	{ "permittunnel", sPermitTunnel, SSHCFG_ALL },
+@@ -1255,6 +1258,9 @@ process_server_config_line(ServerOptions *options, char *line,
+ 	case sAuthorizedKeysFile2:
+ 		charptr = &options->authorized_keys_file2;
+ 		goto parse_tilde_filename;
++  case sAuthorizedKeysScript:
 +		charptr = &options->authorized_keys_script;
-+		goto parse_filename;
-+
- 	case sClientAliveInterval:
- 		intptr = &options->client_alive_interval;
- 		goto parse_time;
-@@ -1596,6 +1603,7 @@ dump_config(ServerOptions *o)
++		goto parse_tilde_filename;
+ 	case sAuthorizedPrincipalsFile:
+ 		charptr = &options->authorized_principals_file;
+  parse_tilde_filename:
+@@ -1738,6 +1744,7 @@ dump_config(ServerOptions *o)
  	dump_cfg_string(sBanner, o->banner);
  	dump_cfg_string(sAuthorizedKeysFile, o->authorized_keys_file);
  	dump_cfg_string(sAuthorizedKeysFile2, o->authorized_keys_file2);
 +	dump_cfg_string(sAuthorizedKeysScript, o->authorized_keys_script);
  	dump_cfg_string(sForceCommand, o->adm_forced_command);
- 
- 	/* string arguments requiring a lookup */
+ 	dump_cfg_string(sChrootDirectory, o->chroot_directory);
+ 	dump_cfg_string(sTrustedUserCAKeys, o->trusted_user_ca_keys);
 diff --git a/servconf.h b/servconf.h
-index 40ac64f..ff7bce6 100644
+index 5a058a4..a891452 100644
 --- a/servconf.h
 +++ b/servconf.h
-@@ -140,6 +140,8 @@ typedef struct {
+@@ -148,6 +148,8 @@ typedef struct {
  	char   *authorized_keys_file;	/* File containing public keys */
  	char   *authorized_keys_file2;
  
@@ -208,3 +242,33 @@ index 40ac64f..ff7bce6 100644
  	char   *adm_forced_command;
  
  	int	use_pam;		/* Enable auth via PAM */
+-- 
+1.7.1
+
+
+From 0e18237aedd4665c89f8f81a4e60f9cb61c3e286 Mon Sep 17 00:00:00 2001
+From: Kevin J. Lynagh <kevin@dirigibleFlightcraft.com>
+Date: Sat, 5 Mar 2011 07:16:14 -0800
+Subject: [PATCH 2/2] Pass two lines to custom script: username, then key.
+
+---
+ auth2-pubkey.c |    3 +++
+ 1 files changed, 3 insertions(+), 0 deletions(-)
+
+diff --git a/auth2-pubkey.c b/auth2-pubkey.c
+index 7a1d467..b7a8ba6 100644
+--- a/auth2-pubkey.c
++++ b/auth2-pubkey.c
+@@ -439,6 +439,9 @@ user_key_found_by_script(struct passwd *pw, Key *key, char *file)
+ 		close(pipe_out[1]);
+ 
+ 		f = fdopen(pipe_in[1], "w");
++		//print the username, a newline, then the provided public key
++		fprintf(f, pw->pw_name);
++		fprintf(f, "\n");
+ 		key_write(key, f);
+ 		fclose(f);
+ 
+-- 
+1.7.1
+

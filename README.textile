@@ -1,14 +1,17 @@
-h1. OpenSSH for git
+h1. OpenSSH with script authentication
 
-The primary goal of this patch/hack is to enable public key lookups via a method other than the @authorized_keys@ file. We wanted it to be flexible, so the patch executes a 3rd party program or script. This way, you can implement your public key lookups in any language backed by any dataset - Ruby, Perl, Python, bash, MySQL, Postgres, CouchDB, etc. Our motivation to write this patch is to support large git repositories, but other creative uses may come about.
+This OpenSSH hack allows you to use a custom script to do public key lookup and authentication.
 
 h2. Auditing
 
-We welcome audits and improvements to the patch (we're not expert C hackers). The @openssh-5.1p1@ branch is openssh-5.1p1 with the patch applied. The original commit in this branch is openssh-5.1p1 with an additional .gitignore file.
+We welcome audits and improvements to the patch (we're not expert C hackers). The @patched-openssh-5.8p1@ branch is @openssh-5.8p1@ with the patch applied.
 
 h2. Security
 
-It should be said that it is unwise to do this; in addition to trusting a script you write with user authentication, the patch is written by some guy in Boston who, while obviously extremely awesome, does not trust himself with the security of your server. If you're going to run this hack, it is recommended you run this in a @chroot@ jail. As such, we *strongly advise against using this patched version of sshd for the main sshd on your server* - run a normal install of sshd on a non-standard port.
+Are you kidding? *We forked a fork of OpenSSH*. Though we only added a few dozen lines, odds are we also incorporated a few hundred buffer overflow vectors.
+If you're going to run this hack, it is recommended you run this in a "@chroot@ jail":http://olivier.sessink.nl/jailkit/jailkit.8.html .
+
+We *strongly advise against using this patched version of sshd for the main sshd on your server* -- run a normal install of sshd on a non-standard port.
 
 In summary: <ins>*USE THIS PATCH AT YOUR OWN RISK.*</ins>
 
@@ -20,7 +23,7 @@ h2. Writing the Program/Script
 
 The script must follow certain guidelines in order for this to work properly.
 
-Your program will receive the public key on STDIN, and is terminated by EOF. It will be in canoncial SSH public key format, starting with @ssh-dss@ or @ssh-rsa@, a space, and then the key data. The user@hostname identifier is not included.
+Your program will receive the username and public key on STDIN, seperated by a newline and terminated by EOF. It will be in canoncial SSH public key format, starting with @ssh-dss@ or @ssh-rsa@, a space, and then the key data.
 
 Your program's exit code is the most important output from your script. *An exit code of 0 means success, while 1 means failure.* Success allows the user to login with that key. It is thus <ins>*VERY important*</ins> that your script does not blindly exit with a code of 0, or the user will be able to login as the user.
 
