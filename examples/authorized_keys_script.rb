@@ -19,7 +19,7 @@ def log(msg)
   LOG.puts "[#{Time.now}] #{msg}" if LOG
 end
 
-key = STDIN.gets
+user, key = STDIN.read.split("\n")
 log("trying to authorize key: #{key}") if LOGGING
 
 unless key =~ /^ssh-(?:dss|rsa) [A-Za-z0-9+\/]+$/
