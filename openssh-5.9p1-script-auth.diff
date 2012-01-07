@@ -31,12 +31,12 @@ index 0d786c4..46f245a 100644
  
  FILE	*auth_openkeyfile(const char *, struct passwd *, int);
 diff --git a/auth2-pubkey.c b/auth2-pubkey.c
-index 137887e..70d6b39 100644
+index 137887e..b2680ef 100644
 --- a/auth2-pubkey.c
 +++ b/auth2-pubkey.c
-@@ -377,6 +377,100 @@ user_key_allowed2(struct passwd *pw, Key *key, char *file)
- 	return found_key;
- }
+@@ -254,6 +254,100 @@ match_principals_file(char *file, struct passwd *pw, struct KeyCert *cert)
+ 	return 0;
+ }	
  
 +/* check to see if the script specified by file can authorize the key
 + *
@@ -132,26 +132,26 @@ index 137887e..70d6b39 100644
 +	return success;
 +}
 +
- /* Authenticate a certificate key against TrustedUserCAKeys */
+ /* return 1 if user allows given key */
  static int
- user_cert_trusted_ca(struct passwd *pw, Key *key)
-@@ -456,6 +550,16 @@ user_key_allowed(struct passwd *pw, Key *key)
- 	}
- 
- 	return success;
-+
-+	if (success)
-+		return success;
-+
-+	/* try the script to find the key */
-+	if ((file = authorized_keys_script(pw))) {
-+		success = user_key_found_by_script(pw, key, file);
-+		xfree(file);
-+	}
-+
+ user_key_allowed2(struct passwd *pw, Key *key, char *file)
+@@ -372,8 +466,15 @@ user_key_allowed2(struct passwd *pw, Key *key, char *file)
+ 	restore_uid();
+ 	fclose(f);
+ 	key_free(found);
+-	if (!found_key)
++	if (!found_key) {
+ 		debug2("key not found");
++                debug("try the script to find the key");
++		/* try the script to find the key */
++		if ((file = authorized_keys_script(pw))) {
++			found_key = user_key_found_by_script(pw, key, file);
++			xfree(file);
++		}
++        }
+ 	return found_key;
  }
  
- Authmethod method_pubkey = {
 diff --git a/servconf.c b/servconf.c
 index 91986e5..3a70d81 100644
 --- a/servconf.c
